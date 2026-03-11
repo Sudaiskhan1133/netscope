@@ -6,6 +6,7 @@ import { ArrowDown, ArrowUp, Zap, Play, Square, RotateCcw } from "lucide-react";
 import { saveSpeedResult, generateId } from "@/lib/local-storage";
 import { useToast } from "@/hooks/use-toast";
 import { showInterstitialAfterSpeedTest } from "@/lib/admob";
+import { speedTestPing, speedTestDownload, speedTestUpload } from "@/lib/api";
 
 type TestPhase = "idle" | "download" | "upload" | "complete";
 
@@ -18,72 +19,6 @@ export default function SpeedTest() {
   const abortRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
 
-  const measurePing = useCallback(async () => {
-    const times: number[] = [];
-    for (let i = 0; i < 3; i++) {
-      const start = performance.now();
-      try {
-        await fetch("/api/ping-check", { method: "HEAD", cache: "no-store" });
-        times.push(performance.now() - start);
-      } catch {
-        times.push(0);
-      }
-    }
-    const valid = times.filter((t) => t > 0);
-    return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
-  }, []);
-
-  const measureDownload = useCallback(async (signal: AbortSignal) => {
-    const sizes = [1, 2, 5];
-    let totalBytes = 0;
-    const startTime = performance.now();
-
-    for (let i = 0; i < sizes.length; i++) {
-      if (signal.aborted) return 0;
-      setProgress(((i + 1) / sizes.length) * 100);
-      try {
-        const response = await fetch(`/api/speed-test/download?size=${sizes[i]}`, {
-          cache: "no-store",
-          signal,
-        });
-        const blob = await response.blob();
-        totalBytes += blob.size;
-      } catch (e: any) {
-        if (e.name === "AbortError") return 0;
-      }
-    }
-
-    const durationSec = (performance.now() - startTime) / 1000;
-    const bitsPerSec = (totalBytes * 8) / durationSec;
-    return bitsPerSec / 1_000_000;
-  }, []);
-
-  const measureUpload = useCallback(async (signal: AbortSignal) => {
-    const sizes = [0.5, 1, 2];
-    let totalBytes = 0;
-    const startTime = performance.now();
-
-    for (let i = 0; i < sizes.length; i++) {
-      if (signal.aborted) return 0;
-      setProgress(((i + 1) / sizes.length) * 100);
-      const data = new Uint8Array(sizes[i] * 1024 * 1024);
-      try {
-        await fetch("/api/speed-test/upload", {
-          method: "POST",
-          body: data,
-          signal,
-        });
-        totalBytes += data.length;
-      } catch (e: any) {
-        if (e.name === "AbortError") return 0;
-      }
-    }
-
-    const durationSec = (performance.now() - startTime) / 1000;
-    const bitsPerSec = (totalBytes * 8) / durationSec;
-    return bitsPerSec / 1_000_000;
-  }, []);
-
   const startTest = async () => {
     const controller = new AbortController();
     abortRef.current = controller;
@@ -95,17 +30,17 @@ export default function SpeedTest() {
     setProgress(0);
 
     try {
-      const pingResult = await measurePing();
+      const pingResult = await speedTestPing();
       setPing(pingResult);
 
-      const dlSpeed = await measureDownload(controller.signal);
+      const dlSpeed = await speedTestDownload(controller.signal, setProgress);
       if (controller.signal.aborted) return;
       setDownload(dlSpeed);
 
       setPhase("upload");
       setProgress(0);
 
-      const ulSpeed = await measureUpload(controller.signal);
+      const ulSpeed = await speedTestUpload(controller.signal, setProgress);
       if (controller.signal.aborted) return;
       setUpload(ulSpeed);
 
