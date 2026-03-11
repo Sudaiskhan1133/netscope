@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Globe, Loader2, Search, Copy, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { whoisLookup } from "@/lib/api";
 
 export default function WhoisLookup() {
   const [domain, setDomain] = useState("");
@@ -21,12 +22,7 @@ export default function WhoisLookup() {
     setQueried(true);
 
     try {
-      const res = await fetch("/api/whois", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain: domain.trim() }),
-      });
-      const data = await res.json();
+      const data = await whoisLookup(domain.trim());
       if (data.error) {
         toast({ title: "WHOIS Lookup Failed", description: data.error, variant: "destructive" });
       } else {
