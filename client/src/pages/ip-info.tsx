@@ -20,6 +20,7 @@ import {
   Network,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { fetchIpInfo } from "@/lib/api";
 
 interface IpData {
   ip: string;
@@ -105,11 +106,10 @@ export default function IpInfo() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  const fetchIpInfo = async () => {
+  const loadIpInfo = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/ip-info");
-      const data = await res.json();
+      const data = await fetchIpInfo();
       setIpData(data);
     } catch {
       toast({ title: "Failed to fetch IP info", variant: "destructive" });
@@ -138,7 +138,7 @@ export default function IpInfo() {
   };
 
   useEffect(() => {
-    fetchIpInfo();
+    loadIpInfo();
     detectLocalIp();
     setDeviceInfo(getDeviceInfo());
   }, []);
@@ -180,7 +180,7 @@ export default function IpInfo() {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-white hover:bg-white/20"
-              onClick={fetchIpInfo}
+              onClick={loadIpInfo}
               data-testid="button-refresh-ip"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
