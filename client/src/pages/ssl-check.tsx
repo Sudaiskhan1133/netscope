@@ -16,6 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { sslCheck } from "@/lib/api";
 
 interface SslResult {
   valid: boolean;
@@ -44,18 +45,11 @@ export default function SslCheck() {
     setQueried(true);
 
     try {
-      const res = await fetch("/api/ssl-check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ host: domain.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "") }),
-      });
-      const data = await res.json();
-      if (data.error) {
+      const data = await sslCheck(domain.trim());
+      if (data.error && !data.valid) {
         toast({ title: "SSL Check Failed", description: data.error, variant: "destructive" });
-        setResult({ ...data, valid: false });
-      } else {
-        setResult(data);
       }
+      setResult(data);
     } catch {
       toast({ title: "SSL Check Failed", variant: "destructive" });
     }
@@ -149,8 +143,8 @@ export default function SslCheck() {
                 {[
                   { icon: Building, label: "Issuer", value: result.issuer },
                   { icon: Globe, label: "Subject", value: result.subject },
-                  { icon: Calendar, label: "Valid From", value: new Date(result.validFrom).toLocaleDateString() },
-                  { icon: Calendar, label: "Valid Until", value: new Date(result.validTo).toLocaleDateString() },
+                  ...(result.validFrom ? [{ icon: Calendar, label: "Valid From", value: new Date(result.validFrom).toLocaleDateString() }] : []),
+                  ...(result.validTo ? [{ icon: Calendar, label: "Valid Until", value: new Date(result.validTo).toLocaleDateString() }] : []),
                   { icon: Lock, label: "Protocol", value: result.protocol || "TLS" },
                   { icon: CheckCircle2, label: "Days Remaining", value: `${result.daysRemaining} days` },
                 ].map((item) => {
