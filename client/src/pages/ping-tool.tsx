@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Radio, Play, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { savePingResult } from "@/lib/local-storage";
 import { useToast } from "@/hooks/use-toast";
+import { pingHost } from "@/lib/api";
 
 interface PingEntry {
   seq: number;
@@ -33,16 +34,11 @@ export default function PingTool() {
       setEntries((prev) => [...prev, { seq: i + 1, time: null, status: "pending" }]);
 
       try {
-        const res = await fetch("/api/ping", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ host: host.trim() }),
-        });
-        const data = await res.json();
+        const data = await pingHost(host.trim());
 
         const entry: PingEntry = {
           seq: i + 1,
-          time: data.time ? parseFloat(data.time) : null,
+          time: data.time ? parseFloat(String(data.time)) : null,
           status: data.alive ? "success" : "timeout",
         };
         results.push(entry);
