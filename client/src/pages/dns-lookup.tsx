@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Loader2, FileText, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { dnsLookup } from "@/lib/api";
 
 interface DnsRecord {
   type: string;
@@ -28,12 +29,7 @@ export default function DnsLookup() {
     setQueried(true);
 
     try {
-      const res = await fetch("/api/dns-lookup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain: domain.trim(), recordType }),
-      });
-      const data = await res.json();
+      const data = await dnsLookup(domain.trim(), recordType);
       if (data.error) {
         toast({ title: "DNS Lookup Failed", description: data.error, variant: "destructive" });
       } else {
